@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
   Container,
   Paper,
@@ -7,27 +8,30 @@ import {
   Typography,
   Box,
   Stack,
-  Link,
+  Alert,
+  CircularProgress,
 } from '@mui/material';
+import { signup } from '../lib/services/auth.service';
+import { ApiError } from '../lib/api-error';
 
-export default function Register() {
-  const [name, setName] = useState('');
-  const [email, setEmail] = useState('');
+interface RegisterProps {
+  onRegisterSuccess?: () => void;
+}
+
+export default function Register({ onRegisterSuccess }: RegisterProps) {
+  const navigate = useNavigate();
+  const [userName, setUserName] = useState('');
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [loading, setLoading] = useState(false);
+  const [successMessage, setSuccessMessage] = useState('');
 
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
-    if (!name.trim()) {
-      newErrors.name = 'Nome é obrigatório';
-    }
-
-    if (!email.trim()) {
-      newErrors.email = 'Email é obrigatório';
-    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      newErrors.email = 'Email inválido';
+    if (!userName.trim()) {
+      newErrors.userName = 'Usuário é obrigatório';
     }
 
     if (!password.trim()) {
@@ -44,10 +48,44 @@ export default function Register() {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setSuccessMessage('');
 
-  
+    if (!validateForm()) {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      await signup({ userName, password });
+
+      setSuccessMessage('Conta criada com sucesso! Redirecionando...');
+      setUserName('');
+      setPassword('');
+      setPasswordConfirm('');
+      setErrors({});
+
+      if (onRegisterSuccess) {
+        onRegisterSuccess();
+      }
+
+      // Redireciona para a página de tarefas após sucesso
+      setTimeout(() => {
+        navigate('/tasks', { replace: true });
+      }, 1500);
+    } catch (err) {
+      let errorMessage = 'Erro ao criar conta';
+      if (err instanceof ApiError) {
+        errorMessage = err.message;
+      } else if (err instanceof Error) {
+        errorMessage = err.message;
+      }
+      setErrors({ submit: errorMessage });
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -55,7 +93,7 @@ export default function Register() {
       <Paper sx={{ p: 4, borderRadius: 2 }}>
         <Box sx={{ mb: 3, textAlign: 'center' }}>
           <Typography variant="h4" sx={{ fontWeight: 'bold', mb: 1 }}>
-            📋 Criar Conta
+            Criar Conta
           </Typography>
           <Typography variant="body2" color="textSecondary">
             Registre-se para começar a gerenciar suas tarefas
@@ -64,35 +102,27 @@ export default function Register() {
 
         <form onSubmit={handleSubmit}>
           <Stack spacing={2}>
-            <TextField
-              label="Nome Completo"
-              fullWidth
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                if (e.target.value.trim()) {
-                  setErrors({ ...errors, name: '' });
-                }
-              }}
-              error={!!errors.name}
-              helperText={errors.name}
-              placeholder="Seu nome"
-            />
+            {successMessage && (
+              <Alert severity="success">{successMessage}</Alert>
+            )}
+            {errors.submit && (
+              <Alert severity="error">{errors.submit}</Alert>
+            )}
 
             <TextField
-              label="Email"
-              type="email"
+              label="Usuário"
               fullWidth
-              value={email}
+              value={userName}
               onChange={(e) => {
-                setEmail(e.target.value);
+                setUserName(e.target.value);
                 if (e.target.value.trim()) {
-                  setErrors({ ...errors, email: '' });
+                  setErrors({ ...errors, userName: '' });
                 }
               }}
-              error={!!errors.email}
-              helperText={errors.email}
-              placeholder="seu@email.com"
+              error={!!errors.userName}
+              helperText={errors.userName}
+              placeholder="seu usuário"
+              disabled={loading}
             />
 
             <TextField
@@ -109,6 +139,7 @@ export default function Register() {
               error={!!errors.password}
               helperText={errors.password}
               placeholder="••••••••"
+              disabled={loading}
             />
 
             <TextField
@@ -125,6 +156,7 @@ export default function Register() {
               error={!!errors.passwordConfirm}
               helperText={errors.passwordConfirm}
               placeholder="••••••••"
+              disabled={loading}
             />
 
             <Button
@@ -133,25 +165,10 @@ export default function Register() {
               fullWidth
               size="large"
               sx={{ mt: 2 }}
+              disabled={loading}
             >
-              Criar Conta
+              {loading ? <CircularProgress size={24} /> : 'Criar Conta'}
             </Button>
-
-            <Box sx={{ textAlign: 'center', pt: 2 }}>
-              <Typography variant="body2">
-                Já tem conta?{' '}
-                <Link
-                  component="button"
-                  variant="body2"
-                  onClick={(e) => {
-                    e.preventDefault();
-                  }}
-                  sx={{ cursor: 'pointer' }}
-                >
-                  Faça login
-                </Link>
-              </Typography>
-            </Box>
           </Stack>
         </form>
       </Paper>

@@ -18,7 +18,7 @@ export interface LoginRequest {
   password: string;
 }
 
-const API_BASE_URL = 'https://localhost:7166/api';
+const API_BASE_URL = 'https://localhost:8081/api';
 
 export async function signup(
   request: SignupRequest
