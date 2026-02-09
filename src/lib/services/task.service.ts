@@ -28,37 +28,19 @@ export interface UpdateTaskDto {
 class TaskService {
   private readonly BASE_PATH = '/tasks';
 
-  /**
-   * Busca todas as tarefas do usuário e as categorias disponíveis
-   */
+
   async getTasks(): Promise<Task[]> {
     return httpClient.get<Task[]>(this.BASE_PATH);
   }
 
-  /**
-   * Busca uma tarefa específica por ID
-   */
-  async getTaskById(id: string): Promise<Task> {
-    return httpClient.get<Task>(`${this.BASE_PATH}/${id}`);
-  }
-
-  /**
-   * Cria uma nova tarefa
-   */
   async createTask(data: CreateTaskDto): Promise<Task> {
     return httpClient.post<Task>(this.BASE_PATH, data);
   }
 
-  /**
-   * Atualiza uma tarefa existente
-   */
   async updateTask(id: string, data: UpdateTaskDto): Promise<Task> {
     return httpClient.put<Task>(`${this.BASE_PATH}/${id}`, data);
   }
 
-  /**
-   * Exclui uma tarefa
-   */
   async deleteTask(id: string): Promise<void> {
     return httpClient.delete<void>(`${this.BASE_PATH}/${id}`);
   }

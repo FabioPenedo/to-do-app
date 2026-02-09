@@ -62,6 +62,61 @@ export default function TaskApp() {
     loadTasks();
   }, []);
 
+  const validateForm = (): boolean => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.Title.trim()) {
+      newErrors.Title = 'O título é obrigatório';
+    }
+
+    if (!formData.Description.trim()) {
+      newErrors.Description = 'A descrição é obrigatória';
+    }
+
+    if (!formData.Category.trim()) {
+      newErrors.Category = 'A categoria é obrigatória';
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleOpenDialog = (task?: Task) => {
+    if (task) {
+      setEditingId(task.id);
+      setFormData({
+        Title: task.title,
+        Description: task.description || '',
+        Category: task.category,
+        IsCompleted: task.isCompleted,
+      });
+    } else {
+      setEditingId(null);
+      setFormData({ Title: '', Description: '', Category: '', IsCompleted: false });
+    }
+    setErrors({});
+    setOpenDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenDialog(false);
+    setEditingId(null);
+    setFormData({ Title: '', Description: '', Category: '', IsCompleted: false });
+    setErrors({});
+  };
+
+  const handleSaveTask = async () => {
+    if (!validateForm()) {
+      return;
+    }
+
+    if (editingId) {
+      await handleUpdateTask();
+    } else {
+      await handleCreateTask();
+    }
+  };
+
   const handleCreateTask = async () => {
     try {
       setIsLoading(true);
@@ -74,28 +129,65 @@ export default function TaskApp() {
       };
       const response = await taskService.createTask(data);
       setTasks((prev) => [...prev, response]);
+      handleCloseDialog();
     } catch (err) {
       setError('Erro ao criar tarefa. Tente novamente.');
       console.error(err);
-    }
-    finally {
+    } finally {
       setIsLoading(false);
-      setFormData({ Title: '', Description: '', Category: '', IsCompleted: false });
+    }
+  };
+
+  const handleUpdateTask = async () => {
+    if (!editingId) return;
+
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const data: any = {
+        Title: formData.Title,
+        Description: formData.Description,
+        Category: formData.Category,
+        IsCompleted: formData.IsCompleted,
+      };
+
+      const response = await taskService.updateTask(editingId, data);
+      setTasks((prev) =>
+        prev.map((task) => (task.id === editingId ? response : task))
+      );
+      handleCloseDialog();
+    } catch (err) {
+      setError('Erro ao atualizar tarefa. Tente novamente.');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleToggleComplete = async (task: Task) => {
+    try {
+      setError(null);
+      const response = await taskService.updateTask(task.id, {
+        IsCompleted: !task.isCompleted,
+      });
+      setTasks((prev) =>
+        prev.map((t) => (t.id === task.id ? response : t))
+      );
+    } catch (err) {
+      setError('Erro ao atualizar status da tarefa.');
+      console.error(err);
     }
   }
 
   const handleDeleteTask = async (id: string) => {
     try {
-      setIsLoading(true);
       setError(null);
       await taskService.deleteTask(id);
       setTasks((prev) => prev.filter((task) => task.id !== id));
     } catch (error) {
       setError('Erro ao deletar tarefa. Tente novamente.');
       console.error(error);
-    }
-    finally {
-      setIsLoading(false);
     }
   }
 
@@ -119,12 +211,12 @@ export default function TaskApp() {
               📋 Minhas Tarefas
             </Typography>
             <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
-              Concluídas: 00
+              Concluídas: {tasks.filter((t) => t.isCompleted).length} de {tasks.length}
             </Typography>
             <Button
               variant="contained"
               startIcon={<AddIcon />}
-              onClick={() => setOpenDialog(true)}
+              onClick={() => handleOpenDialog()}
               fullWidth
               sx={{ mb: 2 }}
             >
@@ -149,7 +241,7 @@ export default function TaskApp() {
                         <IconButton
                           edge="end"
                           aria-label="edit"
-                          onClick={() => { }}
+                          onClick={() => handleOpenDialog(item)}
                           size="small"
                         >
                           <EditIcon fontSize="small" />
@@ -168,14 +260,14 @@ export default function TaskApp() {
                   >
                     <ListItemButton
                       role={undefined}
-                      onClick={() => { }}
+                      onClick={() => handleToggleComplete(item)}
                       dense
                       sx={{ flex: 1 }}
                     >
                       <ListItemIcon>
                         <Checkbox
                           edge="start"
-                          checked={false}
+                          checked={item.isCompleted}
                           tabIndex={-1}
                           disableRipple
                         />
@@ -209,7 +301,7 @@ export default function TaskApp() {
 
 
           {/* Task Form Dialog */}
-          <Dialog open={openDialog} onClose={() => setOpenDialog(false)} maxWidth="sm" fullWidth>
+          <Dialog open={openDialog} onClose={handleCloseDialog} maxWidth="sm" fullWidth>
             <DialogTitle>
               {editingId ? 'Editar Tarefa' : 'Nova Tarefa'}
             </DialogTitle>
@@ -235,26 +327,34 @@ export default function TaskApp() {
                 multiline
                 rows={3}
                 value={formData.Description}
-                onChange={(e) =>
-                  setFormData({ ...formData, Description: e.target.value })
-                }
+                onChange={(e) => {
+                  setFormData({ ...formData, Description: e.target.value });
+                  if (e.target.value.trim()) {
+                    setErrors({ ...errors, Description: '' });
+                  }
+                }}
+                error={!!errors.Description}
+                helperText={errors.Description}
                 placeholder="Digite uma descrição"
               />
               <TextField
                 label="Categoria"
                 fullWidth
-                multiline
-                rows={3}
                 value={formData.Category}
-                onChange={(e) =>
-                  setFormData({ ...formData, Category: e.target.value })
-                }
+                onChange={(e) => {
+                  setFormData({ ...formData, Category: e.target.value });
+                  if (e.target.value.trim()) {
+                    setErrors({ ...errors, Category: '' });
+                  }
+                }}
+                error={!!errors.Category}
+                helperText={errors.Category}
                 placeholder="Digite uma categoria"
               />
             </DialogContent>
             <DialogActions>
-              <Button onClick={() => setOpenDialog(false)}>Cancelar</Button>
-              <Button onClick={() => handleCreateTask()} variant="contained">
+              <Button onClick={handleCloseDialog}>Cancelar</Button>
+              <Button onClick={handleSaveTask} variant="contained" disabled={isLoading}>
                 {editingId ? 'Atualizar' : 'Criar'}
               </Button>
             </DialogActions>
