@@ -15,8 +15,6 @@ export const tokenStore = {
   }
 };
 
-// session.types.ts
-
 export type User = {
   id: number;
   name: string;
@@ -25,8 +23,6 @@ export type User = {
 export type Session = {
   user: User;
 };
-
-// sessionStore.ts
 
 const SESSION_KEY = 'session';
 

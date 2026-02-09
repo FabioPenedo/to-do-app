@@ -7,7 +7,8 @@ export interface ApiResponse<T> {
   data: T;
 }
 
-const API_BASE_URL = 'https://localhost:8081/api';
+const API_BASE_URL = process.env.API_BASE_URL || 'https://localhost:8081/api';
+
 
 export class HttpClient {
   /**
