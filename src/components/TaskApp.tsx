@@ -21,6 +21,8 @@ import {
   Chip,
   CircularProgress,
   Alert,
+  Tabs,
+  Tab,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
@@ -42,25 +44,48 @@ export default function TaskApp() {
     IsCompleted: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [categories, setCategories] = useState<string[]>([]);
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
 
   // Busca tarefas ao montar o componente
   useEffect(() => {
-    const loadTasks = async () => {
-      try {
-        setIsLoading(true);
-        setError(null);
-        const response = await taskService.getTasks();
-        setTasks(response);
-      } catch (err) {
-        setError('Erro ao carregar tarefas. Tente novamente.');
-        console.error(err);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    loadTasks();
+    fetchTasks();
   }, []);
+
+
+  const extractCategories = (tasks: Task[]) => {
+    return Array.from(
+      new Set(tasks.map(task => task.category).filter(Boolean))
+    );
+  };
+
+  const syncCategories = (tasks: Task[]) => {
+    setCategories(extractCategories(tasks));
+  };
+
+
+  const fetchTasks = async (category?: string) => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      let response: Task[];
+
+      if (!category || category === 'all') {
+        response = await taskService.getTasks();
+        setCategories(extractCategories(response));
+      } else {
+        response = await taskService.getTasksByCategory(category);
+      }
+
+      setTasks(response);
+    } catch (err) {
+      setError('Erro ao carregar tarefas. Tente novamente.');
+      console.error(err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const validateForm = (): boolean => {
     const newErrors: Record<string, string> = {};
@@ -128,7 +153,11 @@ export default function TaskApp() {
         UserId: session!.user.id,
       };
       const response = await taskService.createTask(data);
-      setTasks((prev) => [...prev, response]);
+      setTasks(prev => {
+        const updated = [...prev, response];
+        syncCategories(updated);
+        return updated;
+      });
       handleCloseDialog();
     } catch (err) {
       setError('Erro ao criar tarefa. Tente novamente.');
@@ -153,9 +182,14 @@ export default function TaskApp() {
       };
 
       const response = await taskService.updateTask(editingId, data);
-      setTasks((prev) =>
-        prev.map((task) => (task.id === editingId ? response : task))
-      );
+      setTasks(prev => {
+        const updated = prev.map(task =>
+          task.id === editingId ? response : task
+        );
+
+        syncCategories(updated);
+        return updated;
+      });
       handleCloseDialog();
     } catch (err) {
       setError('Erro ao atualizar tarefa. Tente novamente.');
@@ -184,12 +218,24 @@ export default function TaskApp() {
     try {
       setError(null);
       await taskService.deleteTask(id);
-      setTasks((prev) => prev.filter((task) => task.id !== id));
+      setTasks(prev => {
+        const updated = prev.filter(task => task.id !== id);
+        syncCategories(updated);
+        return updated;
+      });
     } catch (error) {
       setError('Erro ao deletar tarefa. Tente novamente.');
       console.error(error);
     }
   }
+
+  const handleCategoryChange = (
+    _: React.SyntheticEvent,
+    newValue: string
+  ) => {
+    setSelectedCategory(newValue);
+    fetchTasks(newValue);
+  };
 
 
   return (
@@ -213,6 +259,25 @@ export default function TaskApp() {
             <Typography variant="body2" color="textSecondary" sx={{ mb: 2 }}>
               Concluídas: {tasks.filter((t) => t.isCompleted).length} de {tasks.length}
             </Typography>
+
+            {/* Tabs de Categorias */}
+            {categories.length > 0 && (
+              <Paper sx={{ mb: 2 }}>
+                <Tabs
+                  value={selectedCategory}
+                  onChange={handleCategoryChange}
+                  variant="scrollable"
+                  scrollButtons="auto"
+                  aria-label="categorias de tarefas"
+                >
+                  <Tab label="Todas" value="all" />
+                  {categories.map((category) => (
+                    <Tab key={category} label={category} value={category} />
+                  ))}
+                </Tabs>
+              </Paper>
+            )}
+
             <Button
               variant="contained"
               startIcon={<AddIcon />}

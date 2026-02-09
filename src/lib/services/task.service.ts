@@ -33,6 +33,10 @@ class TaskService {
     return httpClient.get<Task[]>(this.BASE_PATH);
   }
 
+  async getTasksByCategory(category: string): Promise<Task[]> {
+    return httpClient.get<Task[]>(`${this.BASE_PATH}/category/${category}`);
+  }
+
   async createTask(data: CreateTaskDto): Promise<Task> {
     return httpClient.post<Task>(this.BASE_PATH, data);
   }
