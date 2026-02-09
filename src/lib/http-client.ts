@@ -1,3 +1,5 @@
+/// <reference types="vite/client" />
+
 import { tokenStore } from './info.store';
 import { ApiError } from './api-error';
 
@@ -7,7 +9,8 @@ export interface ApiResponse<T> {
   data: T;
 }
 
-const API_BASE_URL = process.env.API_BASE_URL || 'https://localhost:8081/api';
+const API_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ?? 'https://localhost:8081/api';
 
 
 export class HttpClient {

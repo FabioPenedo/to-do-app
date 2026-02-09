@@ -1,0 +1,23 @@
+services:
+  # Serviço de desenvolvimento
+  dev:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: development
+    container_name: todo-front-dev
+    ports:
+      - "5173:5173"
+    volumes:
+      - .:/app
+      - /app/node_modules
+    environment:
+      - NODE_ENV=development
+    stdin_open: true
+    tty: true
+    networks:
+      - todo-network
+
+networks:
+  todo-network:
+    driver: bridge
