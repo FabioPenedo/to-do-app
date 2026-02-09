@@ -83,7 +83,7 @@ npm install
 3. Configure as variáveis de ambiente (se necessário):
 ```bash
 # Crie um arquivo .env com a URL do backend
-VITE_API_BASE_URL=https://localhost:8081/api
+VITE_API_BASE_URL=http://localhost:8080/api
 ```
 
 4. Inicie o servidor de desenvolvimento:
